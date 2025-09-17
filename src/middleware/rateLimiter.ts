@@ -104,8 +104,8 @@ export class RateLimiter {
 
   private getClientId(req: Request): string {
     // Use IP address as client identifier
-    // In production, you might want to use user ID or API key
-    return req.ip || req.connection.remoteAddress || 'unknown';
+    // In production, we might want to use user ID or API key
+    return req.ip ?? req.socket.remoteAddress ?? 'unknown';
   }
 
   private cleanupExpired(): void {

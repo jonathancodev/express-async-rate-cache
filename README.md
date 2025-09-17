@@ -2,7 +2,7 @@
 
 A high-performance Express.js API with advanced caching strategies, sophisticated rate limiting, and asynchronous processing designed to handle high traffic efficiently.
 
-## 🚀 Features
+## Features
 
 - **Advanced LRU Cache**: In-memory caching with TTL, automatic cleanup, and comprehensive statistics
 - **Sophisticated Rate Limiting**: Dual-layer rate limiting with burst capacity handling
@@ -11,13 +11,13 @@ A high-performance Express.js API with advanced caching strategies, sophisticate
 - **Performance Monitoring**: Detailed metrics and response time tracking
 - **Graceful Error Handling**: Comprehensive error responses with meaningful messages
 
-## 📋 Requirements
+## Requirements
 
 - Node.js >= 16.0.0
 - pnpm (recommended) or npm
 - TypeScript
 
-## 🛠️ Installation
+## Installation
 
 1. **Clone the repository**:
    ```bash
@@ -54,7 +54,7 @@ A high-performance Express.js API with advanced caching strategies, sophisticate
 
 The server will start on `http://localhost:3000` by default.
 
-## 📡 API Endpoints
+## API Endpoints
 
 ### Core Endpoints
 
@@ -146,7 +146,7 @@ Health check endpoint.
 #### `GET /`
 API documentation and overview.
 
-## 🏗️ Architecture
+## Architecture
 
 ### Caching Strategy
 
@@ -198,7 +198,7 @@ API documentation and overview.
 - Maintains request order integrity
 - Provides detailed queue statistics
 
-## 🧪 Testing
+## Testing
 
 ### Manual Testing with cURL
 
@@ -245,7 +245,7 @@ For comprehensive load testing, consider using tools like:
 - **Apache Bench**: `ab -n 100 -c 10 http://localhost:3000/users/1`
 - **wrk**: `wrk -t12 -c400 -d30s http://localhost:3000/users/1`
 
-## 📊 Performance Characteristics
+## Performance Characteristics
 
 ### Cache Performance
 - **Cache Hit Response**: ~2-5ms
@@ -263,7 +263,7 @@ For comprehensive load testing, consider using tools like:
 - **Queue Processing**: 20 requests/second sustained throughput
 - **Memory Footprint**: Minimal queue storage overhead
 
-## 🔧 Configuration
+## Configuration
 
 ### Environment Variables
 
@@ -290,10 +290,13 @@ const rateLimiter = new RateLimiter(
 );
 ```
 
-## 🏛️ Project Structure
+## Project Structure
 
 ```
 src/
+├── routes/
+│   ├── users.ts            # User endpoints (GET /users/:id, POST /users)
+│   └── cache.ts            # Cache endpoints (DELETE /cache, GET /cache/status)
 ├── cache/
 │   └── LRUCache.ts          # LRU cache implementation
 ├── middleware/
@@ -305,7 +308,7 @@ src/
 └── index.ts                # Main application entry point
 ```
 
-## 🤝 Development
+## Development
 
 ### Code Style
 - **TypeScript**: Strict mode enabled
@@ -318,7 +321,7 @@ src/
 3. Add endpoints in `src/index.ts`
 4. Update documentation
 
-## 🐛 Error Handling
+## Error Handling
 
 The API provides comprehensive error handling with consistent response formats:
 
@@ -337,7 +340,7 @@ The API provides comprehensive error handling with consistent response formats:
 - `429`: Too Many Requests (rate limited)
 - `500`: Internal Server Error
 
-## 📈 Monitoring
+## Monitoring
 
 ### Built-in Metrics
 - Cache hit/miss ratios
@@ -352,7 +355,7 @@ The API provides comprehensive error handling with consistent response formats:
 - Performance monitoring
 - Cache operations logging
 
-## 🚀 Production Deployment
+## Production Deployment
 
 ### Recommended Setup
 1. **Process Manager**: Use PM2 for process management
@@ -371,18 +374,14 @@ EXPOSE 3000
 CMD ["node", "dist/index.js"]
 ```
 
-## 📄 License
+## License
 
 This project is licensed under the ISC License.
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
 4. Add tests
 5. Submit a pull request
-
----
-
-**Built with ❤️ using TypeScript, Express.js, and modern Node.js practices.**

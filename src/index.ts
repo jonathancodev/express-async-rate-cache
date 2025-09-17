@@ -3,7 +3,9 @@ import cors from 'cors';
 import { LRUCache } from './cache/LRUCache';
 import { RateLimiter } from './middleware/rateLimiter';
 import { DatabaseService } from './services/DatabaseService';
-import { User, ApiResponse, CreateUserRequest } from './types';
+import { User, ApiResponse } from './types';
+import { createUsersRouter } from './routes/users';
+import { createCacheRouter } from './routes/cache';
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
@@ -35,207 +37,21 @@ app.use(rateLimiter.middleware());
 app.use((req: Request, res: Response, next: NextFunction) => {
   const startTime = Date.now();
   
-  res.on('finish', () => {
+  // Override res.end to calculate and set response time before sending
+  const originalEnd = res.end;
+  res.end = function(chunk?: any, encoding?: any, cb?: any) {
     const responseTime = Date.now() - startTime;
     res.set('X-Response-Time', `${responseTime}ms`);
-  });
+    return originalEnd.call(this, chunk, encoding, cb);
+  };
   
   next();
 });
 
-// GET /users/:id - Retrieve user data by ID
-app.get('/users/:id', async (req: Request, res: Response): Promise<void> => {
-  const startTime = Date.now();
-  
-  try {
-    const userId = parseInt(req.params.id!);
-    
-    if (isNaN(userId) || userId <= 0) {
-      const response: ApiResponse = {
-        success: false,
-        error: 'Invalid user ID. Must be a positive integer.',
-        timestamp: Date.now(),
-        responseTime: Date.now() - startTime
-      };
-      res.status(400).json(response);
-      return;
-    }
+// Mount routes
+app.use('/users', createUsersRouter(userCache, dbService));
+app.use('/cache', createCacheRouter(userCache, dbService));
 
-    const cacheKey = `user:${userId}`;
-    
-    // Try to get from cache first
-    const cachedUser = userCache.get(cacheKey);
-    if (cachedUser) {
-      const response: ApiResponse<User> = {
-        success: true,
-        data: cachedUser,
-        timestamp: Date.now(),
-        cached: true,
-        responseTime: Date.now() - startTime
-      };
-      res.json(response);
-      return;
-    }
-
-    // If not in cache, fetch from database
-    try {
-      const user = await dbService.getUserById(userId);
-      
-      // Cache the result
-      userCache.set(cacheKey, user);
-      
-      const response: ApiResponse<User> = {
-        success: true,
-        data: user,
-        timestamp: Date.now(),
-        cached: false,
-        responseTime: Date.now() - startTime
-      };
-      res.json(response);
-    } catch (error) {
-      const response: ApiResponse = {
-        success: false,
-        error: error instanceof Error ? error.message : 'User not found',
-        timestamp: Date.now(),
-        responseTime: Date.now() - startTime
-      };
-      res.status(404).json(response);
-    }
-  } catch (error) {
-    console.error('Error in GET /users/:id:', error);
-    const response: ApiResponse = {
-      success: false,
-      error: 'Internal server error',
-      timestamp: Date.now(),
-      responseTime: Date.now() - startTime
-    };
-    res.status(500).json(response);
-  }
-});
-
-// POST /users - Create a new user
-app.post('/users', async (req: Request, res: Response): Promise<void> => {
-  const startTime = Date.now();
-  
-  try {
-    const { name, email }: CreateUserRequest = req.body;
-    
-    if (!name || !email) {
-      const response: ApiResponse = {
-        success: false,
-        error: 'Name and email are required',
-        timestamp: Date.now(),
-        responseTime: Date.now() - startTime
-      };
-      res.status(400).json(response);
-      return;
-    }
-
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      const response: ApiResponse = {
-        success: false,
-        error: 'Invalid email format',
-        timestamp: Date.now(),
-        responseTime: Date.now() - startTime
-      };
-      res.status(400).json(response);
-      return;
-    }
-
-    try {
-      const newUser = await dbService.createUser(name, email);
-      
-      // Cache the new user
-      const cacheKey = `user:${newUser.id}`;
-      userCache.set(cacheKey, newUser);
-      
-      const response: ApiResponse<User> = {
-        success: true,
-        data: newUser,
-        timestamp: Date.now(),
-        responseTime: Date.now() - startTime
-      };
-      res.status(201).json(response);
-    } catch (error) {
-      const response: ApiResponse = {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to create user',
-        timestamp: Date.now(),
-        responseTime: Date.now() - startTime
-      };
-      res.status(500).json(response);
-    }
-  } catch (error) {
-    console.error('Error in POST /users:', error);
-    const response: ApiResponse = {
-      success: false,
-      error: 'Internal server error',
-      timestamp: Date.now(),
-      responseTime: Date.now() - startTime
-    };
-    res.status(500).json(response);
-  }
-});
-
-// DELETE /cache - Clear the entire cache
-app.delete('/cache', (req: Request, res: Response) => {
-  const startTime = Date.now();
-  
-  try {
-    userCache.clear();
-    
-    const response: ApiResponse = {
-      success: true,
-      data: { message: 'Cache cleared successfully' },
-      timestamp: Date.now(),
-      responseTime: Date.now() - startTime
-    };
-    res.json(response);
-  } catch (error) {
-    console.error('Error in DELETE /cache:', error);
-    const response: ApiResponse = {
-      success: false,
-      error: 'Failed to clear cache',
-      timestamp: Date.now(),
-      responseTime: Date.now() - startTime
-    };
-    res.status(500).json(response);
-  }
-});
-
-// GET /cache-status - Get cache statistics
-app.get('/cache-status', (req: Request, res: Response) => {
-  const startTime = Date.now();
-  
-  try {
-    const cacheStats = userCache.getStats();
-    const queueStats = dbService.getQueueStats();
-    
-    const response: ApiResponse = {
-      success: true,
-      data: {
-        cache: cacheStats,
-        queue: queueStats,
-        uptime: process.uptime(),
-        memoryUsage: process.memoryUsage()
-      },
-      timestamp: Date.now(),
-      responseTime: Date.now() - startTime
-    };
-    res.json(response);
-  } catch (error) {
-    console.error('Error in GET /cache-status:', error);
-    const response: ApiResponse = {
-      success: false,
-      error: 'Failed to get cache status',
-      timestamp: Date.now(),
-      responseTime: Date.now() - startTime
-    };
-    res.status(500).json(response);
-  }
-});
 
 // GET /health - Health check endpoint
 app.get('/health', (req: Request, res: Response) => {
@@ -263,7 +79,7 @@ app.get('/', (req: Request, res: Response) => {
       'GET /users/:id': 'Get user by ID (cached)',
       'POST /users': 'Create new user',
       'DELETE /cache': 'Clear entire cache',
-      'GET /cache-status': 'Get cache and queue statistics'
+      'GET /cache/status': 'Get cache and queue statistics'
     },
     rateLimiting: {
       requests: '10 per minute',
@@ -317,10 +133,10 @@ process.on('SIGINT', () => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Cache TTL: 60 seconds, Max size: 1000 items`);
-  console.log(`🛡️  Rate limit: 10 requests/minute, 5 burst/10 seconds`);
-  console.log(`🔗 API Documentation: http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Cache TTL: 60 seconds, Max size: 1000 items`);
+  console.log(`Rate limit: 10 requests/minute, 5 burst/10 seconds`);
+  console.log(`API Documentation: http://localhost:${PORT}`);
 });
 
 export default app;

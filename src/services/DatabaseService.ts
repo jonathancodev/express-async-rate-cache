@@ -67,7 +67,7 @@ export class DatabaseService {
           console.log(`Created new user: ${JSON.stringify(newUser)}`);
           resolve(newUser);
         } catch (error) {
-          reject(error);
+          reject(error as Error);
         }
       }, 100); // Shorter delay for user creation
     });
